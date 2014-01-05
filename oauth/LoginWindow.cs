@@ -2,67 +2,155 @@ using System;
 using Gtk;
 using WebKit;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 
 namespace kpasech.oauth
 {
 	public delegate void KeyReceived(string key, string userId, Int64 expirationTime);
+	public delegate void ErrorReceived(int code, string description);
 	
 	public class LoginWindow:IDisposable
 	{
-		private Window window;
-		private string _url;
+		const string URL = "https://oauth.vk.com/authorize?client_id={0}&scope={1}&display={2}&v={3}&response_type=token";
+		
+		private Window _window;
+		private string _app_id;
+		private string _scope;
+		private string _display;
+		private string _api_veresion;
+		private WebView _wbkt;
+		private int _window_height;
+		private int _window_width;
 		
 		public event KeyReceived OnKeyReceived;
+		public event ErrorReceived OnErrorReceived;
 		
-		public LoginWindow (string url)
+		private string getDictValue(Dictionary<string, string> dict, string key, string defaultValue = default(string))
 		{
-			window = new Window("LogIn");
-			_url = url;
+			if(dict.ContainsKey(key))
+			{
+				return dict[key];
+			}
+			else
+			{
+				return defaultValue;
+			}
+		}
+		
+		public LoginWindow (string app_id, string scope, Dictionary<string, string> optional_parameters)
+		{
+			_window = new Window("LogIn");
+			
+			_app_id = app_id;
+			_scope = scope;
+			_display = getDictValue(optional_parameters, "display", "popup");
+			_api_veresion = getDictValue(optional_parameters, "api_veresion", "5.5");
+			_window_width = int.Parse(getDictValue(optional_parameters, "window_width", "460"));
+			_window_height = int.Parse(getDictValue(optional_parameters, "window_height", "320"));
 		}
 
 		#region IDisposable implementation
 		public void Dispose ()
 		{
-			//window.Dispose();
+			_window.Dispose();
 		}
 		#endregion
+		
+		private void throwError(int code, string description)
+		{
+			OnErrorReceived(code, description);
+		}
 
-		#region implementation
 		public void Init ()
 		{
-			var fxd = new Fixed();
-			window.Add(fxd);
-			var wbkt = new WebView();
-			fxd.Add(wbkt);
-			
-			//init window
-			window.SetSizeRequest(520,320);
-			window.AllowShrink = false;
-			window.Resizable = false;
-			window.SetPosition(WindowPosition.CenterAlways);
-			
-			window.DeleteEvent += (o, args) => 
+			try{
+				var fxd = new Fixed();
+				_window.Add(fxd);
+				_wbkt = new WebView();
+				fxd.Add(_wbkt);
+				
+				//init window
+				this.SetSizeRequest(_window_width, _window_height);
+				_window.AllowShrink = false;
+				_window.Resizable = false;
+				_window.SetPosition(WindowPosition.CenterAlways);
+				
+				//subscribe on events
+				_window.DeleteEvent += OnDelete;
+				_wbkt.LoadFinished += OnWindowLoaded;
+				
+				//webkit init
+				_wbkt.Open(string.Format (URL, this._app_id, _scope, _display, _api_veresion));
+			}
+			catch(Exception ex)
 			{
-				Application.Quit();
-				Console.Clear();
-				Console.WriteLine("'error': 'User has closed window'");
-				Environment.Exit(1);
-			};			
+				this.throwError(22, "Error while window initialization: " + ex.Message);
+			}
 			
-			//webkit init
-			wbkt.Open(this._url);
-			
-			wbkt.LoadFinished += (o, args) => {
-				if(wbkt.Uri.Contains("/blank.html"))
+		}
+
+		public void ShowAll ()
+		{
+			try
+			{
+				_window.ShowAll();
+			}
+			catch(Exception ex)
+			{
+				this.throwError(23, ex.Message);
+			}
+		}
+
+		public void Close ()
+		{
+			try
+			{
+				_window.HideAll();
+			}
+			catch(Exception ex)
+			{
+				this.throwError(24, ex.Message);
+			}
+		}
+		
+		public void SetSizeRequest(int x=520, int y=320)
+		{
+			try
+			{
+				_window.SetSizeRequest(x,y);
+			}
+			catch(Exception ex)
+			{
+				this.throwError(25, ex.Message);
+			}
+		}
+		
+		protected void OnDelete(object o, DeleteEventArgs args)
+		{
+			this.throwError(33, "User has closed window");
+		}
+		
+		public void OnWindowLoaded(object o, LoadFinishedArgs args)
+		{
+				if(_wbkt.Uri.Contains("/blank.html"))
 				{
-					if(wbkt.Uri.ToLower().Contains("?error="))
+					if(_wbkt.Uri.ToLower().Contains("?error="))
 					{
-						//Error happened
-						
-						//TODO: add normal error handling 
 						// error string example http://REDIRECT_URI?error=access_denied&error_description=The+user+or+authorization+server+denied+the+request.
-						throw new ApplicationException("Error while login to vkontakte: " + wbkt.Uri.ToLower());
+						var errorMessageRegexp = new Regex("error_description=[0-9,a-f]+(&|$)", RegexOptions.CultureInvariant|RegexOptions.IgnoreCase);
+						var errorMessage = errorMessageRegexp.Match(_wbkt.Uri);
+						if( errorMessage.Success)
+						{
+							var message = errorMessage.Value.Substring(18).Replace("&","");
+						    //message = (message);
+							message = message.Replace("+", " ");
+							this.throwError(28, "Error while login to vkontakte: " + message);
+						}
+						else
+						{
+							this.throwError(27, "Error while login to vkontakte: " + _wbkt.Uri.ToLower());
+						}
 					}
 					else
 					{
@@ -72,9 +160,9 @@ namespace kpasech.oauth
 						var expirationTimeRegex = new Regex("expires_in=[0-9]+(&|$)", RegexOptions.CultureInvariant|RegexOptions.IgnoreCase);
 						
 						
-						var keyMatch = keyRegex.Match(wbkt.Uri);
-						var userIdMatch = userIdRegex.Match(wbkt.Uri);
-						var expirationTimeMatch = expirationTimeRegex.Match(wbkt.Uri);
+						var keyMatch = keyRegex.Match(_wbkt.Uri);
+						var userIdMatch = userIdRegex.Match(_wbkt.Uri);
+						var expirationTimeMatch = expirationTimeRegex.Match(_wbkt.Uri);
 						
 						if(keyMatch.Success && userIdMatch.Success && expirationTimeMatch.Success)
 						{
@@ -86,25 +174,20 @@ namespace kpasech.oauth
 						}
 						else
 						{
-							throw new ApplicationException("Error while login to vkontakte");
+							this.throwError(26, "No authentication keys has been returned");
 						}
 						
 					}
 				}
-			};
-			
-		}
-
-		public void ShowAll ()
-		{
-			window.ShowAll();
-		}
-
-		public void Close ()
-		{
-			window.HideAll();
-		}
-		
-		#endregion
+				else if(_wbkt.SearchText("error", false,true, false))
+				{
+					// TODO: Add error handling here
+					
+					//_wbkt.SelectAll();
+					//_wbkt.CopyClipboard();
+					
+					this.OnErrorReceived(34, "Unknown error while login to vk.com");
+				}
+			}
 	}
 }
