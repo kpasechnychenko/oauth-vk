@@ -7,8 +7,8 @@ namespace kpasech.oauth
 {
 	class MainClass
 	{
-		const string RESULT_JSON = "{{'auth_token': '{0}', 'userId': '{1}, 'expirationTime': '{2}'}}";
-		const string ERROR_JSON = "{{'error': 'access denied','code': '{0}', 'description': '{1}'}}";
+		const string RESULT_JSON = @"{{""auth_token"": ""{0}"", ""userId"": ""{1}"", ""expirationTime"": ""{2}""}}";
+		const string ERROR_JSON = @"{{""error"": ""access denied"",""code"": ""{0}"", ""description"": ""{1}""}}";
 		
 		public static void Main (string[] args)
 		{

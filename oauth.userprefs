@@ -1,24 +1,19 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="oauth/LoginWindow.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="oauth/Main.cs">
     <Files>
-      <File FileName="oauth/Main.cs" Line="24" Column="6" />
-      <File FileName="oauth/LoginWindow.cs" Line="185" Column="6" />
+      <File FileName="oauth/Main.cs" Line="11" Column="31" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
-          <Node name="oauth" expanded="True" selected="True">
-            <Node name="References" expanded="True" />
-          </Node>
+          <Node name="oauth" expanded="True" selected="True" />
         </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore>
-      <Breakpoint file="/home/kpasech/workspace/oauth-vk/oauth/LoginWindow.cs" line="184" />
-    </BreakpointStore>
+    <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>
